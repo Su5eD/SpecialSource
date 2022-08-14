@@ -28,15 +28,14 @@
  */
 package net.md_5.specialsource;
 
+import com.google.common.collect.Sets;
 import net.md_5.specialsource.util.Pair;
 import net.md_5.specialsource.util.FileLocator;
 import net.md_5.specialsource.provider.JointProvider;
 import net.md_5.specialsource.provider.JarProvider;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
+
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import joptsimple.OptionException;
@@ -136,6 +135,9 @@ public class SpecialSource {
                 acceptsAll(asList("e", "excluded-packages"), "A comma seperated list of packages that should not be transformed, even if the srg specifies they should")
                         .withRequiredArg()
                         .ofType(String.class);
+                acceptsAll(asList("p", "remap-only"), "A comma seperated whitelist of mapped packages that should be transformed.")
+                    .withRequiredArg()
+                    .ofType(String.class);
 
                 acceptsAll(asList("only"), "Process only the specified packages. Similar to --excluded-packages but applies at the processing rather than loading phase")
                         .withRequiredArg()
@@ -191,11 +193,22 @@ public class SpecialSource {
         {
             identifier = (String)options.valueOf("identifier");
         }
+        
+        if (options.has("excluded-packages") && options.has("remap-only"))
+        {
+            throw new IllegalArgumentException("Can't specify both excluded-packages and remap-only");
+        }
 
         String[] excluded = new String[0];
         if (options.has("excluded-packages"))
         {
             excluded = ((String)options.valueOf("excluded-packages")).split(",");
+        }
+        
+        String[] included = new String[0];
+        if (options.has("remap-only"))
+        {
+            included = ((String) options.valueOf("remap-only")).split(",");
         }
 
         FileLocator.useCache = !options.has("force-redownload");
@@ -225,6 +238,10 @@ public class SpecialSource {
             {
                 jarMapping.addExcludedPackage(pkg);
             }
+            for (String pkg : included)
+            {
+                jarMapping.addIncludedPackage(pkg);
+            }
         } else if (options.has("srg-in")) {
             log("Loading mappings");
 
@@ -232,6 +249,10 @@ public class SpecialSource {
             for (String pkg : excluded)
             {
                 jarMapping.addExcludedPackage(pkg);
+            }
+            for (String pkg : included)
+            {
+                jarMapping.addIncludedPackage(pkg);
             }
 
             // Loading options

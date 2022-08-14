@@ -55,6 +55,7 @@ public class JarMapping {
     private InheritanceMap inheritanceMap = new InheritanceMap();
     private InheritanceProvider fallbackInheritanceProvider = null;
     private Set<String> excludedPackages = new HashSet<String>();
+    private Set<String> includedPackages = new HashSet<String>();
     private String currentClass = null;
 
     public JarMapping() {
@@ -85,8 +86,21 @@ public class JarMapping {
         SpecialSource.log("Protecting Package: " + packageName);
         excludedPackages.add(packageName);
     }
+    
+    public void addIncludedPackage(String packageName) {
+        SpecialSource.log("Whitelisting Package: " + packageName);
+        includedPackages.add(packageName);
+    }
 
-    private boolean isExcludedPackage(String desc) {
+    private boolean isExcludedPackage(String desc, Remapper remapper) {
+        return isExcludedPackage(desc, remapper.map(desc));
+    }
+
+    private boolean isExcludedPackage(String desc, String mappedDesc) {
+        if (!includedPackages.isEmpty() && mappedDesc != null) {
+            return includedPackages.stream().noneMatch(mappedDesc::startsWith);
+        }
+        
         for (String packageName : excludedPackages) {
             if (desc.startsWith(packageName)) {
                 return true;
@@ -454,7 +468,7 @@ public class JarMapping {
             String newClassName = outputTransformer.transformClassName(tokens[1]);
 
             if (oldClassName.endsWith("/")) {
-                if (isExcludedPackage(oldClassName)) {
+                if (isExcludedPackage(oldClassName, newClassName)) {
                     SpecialSource.log("Ignored PK: " + oldClassName + " " + newClassName);
                     return;
                 }
@@ -477,7 +491,7 @@ public class JarMapping {
             } else {
                 currentClass = tokens[0];
                 
-                if (isExcludedPackage(oldClassName)) {
+                if (isExcludedPackage(oldClassName, newClassName)) {
                     SpecialSource.log("Ignored CL: " + oldClassName + " " + newClassName);
                     return;
                 }
@@ -505,7 +519,7 @@ public class JarMapping {
                 oldFieldName = temp;
             }
 
-            if (isExcludedPackage(oldClassName)) {
+            if (isExcludedPackage(oldClassName, reverseMap)) {
                 SpecialSource.log("Ignored FD: " + oldClassName + "/" + oldFieldName + " -> " + newFieldName);
                 return;
             }
@@ -530,7 +544,7 @@ public class JarMapping {
                 oldMethodName = temp;
             }
 
-            if (isExcludedPackage(oldClassName)) {
+            if (isExcludedPackage(oldClassName, reverseMap)) {
                 SpecialSource.log("Ignored MD: " + oldClassName + "/" + oldMethodName + " -> " + newMethodName);
                 return;
             }
@@ -559,7 +573,7 @@ public class JarMapping {
                 oldClassName = temp;
             }
 
-            if (isExcludedPackage(oldClassName)) {
+            if (isExcludedPackage(oldClassName, newClassName)) {
                 SpecialSource.log("Ignored CL: " + oldClassName + " " + newClassName);
                 return;
             }
@@ -589,7 +603,7 @@ public class JarMapping {
                 oldPackageName = temp;
             }
 
-            if (isExcludedPackage(oldPackageName)) {
+            if (isExcludedPackage(oldPackageName, newPackageName)) {
                 SpecialSource.log("Ignored PK: " + oldPackageName + " -> " + newPackageName);
                 return;
             }
@@ -634,7 +648,7 @@ public class JarMapping {
                 oldFieldName = temp;
             }
 
-            if (isExcludedPackage(oldClassName)) {
+            if (isExcludedPackage(oldClassName, newClassName)) {
                 SpecialSource.log("Ignored FD: " + oldClassName + "/" + oldFieldName + " -> " + newFieldName);
                 return;
             }
@@ -675,7 +689,7 @@ public class JarMapping {
                 oldMethodName = temp;
             }
 
-            if (isExcludedPackage(oldClassName)) {
+            if (isExcludedPackage(oldClassName, newClassName)) {
                 SpecialSource.log("Ignored MD: " + oldClassName + "/" + oldMethodName + " -> " + newMethodName);
                 return;
             }
