@@ -454,6 +454,11 @@ public class JarMapping {
             String newClassName = outputTransformer.transformClassName(tokens[1]);
 
             if (oldClassName.endsWith("/")) {
+                if (isExcludedPackage(oldClassName)) {
+                    SpecialSource.log("Ignored PK: " + oldClassName + " " + newClassName);
+                    return;
+                }
+                
                 // Special case: mapping an entire hierarchy of classes
                 if (reverse) {
                     packages.put(newClassName, oldClassName.substring(0, oldClassName.length() - 1));
@@ -461,12 +466,18 @@ public class JarMapping {
                     packages.put(oldClassName.substring(0, oldClassName.length() - 1), newClassName);
                 }
             } else {
+                currentClass = tokens[0];
+                
+                if (isExcludedPackage(oldClassName)) {
+                    SpecialSource.log("Ignored CL: " + oldClassName + " " + newClassName);
+                    return;
+                }
+                
                 if (reverse) {
                     classes.put(newClassName, oldClassName);
                 } else {
                     classes.put(oldClassName, newClassName);
                 }
-                currentClass = tokens[0];
             }
         } else if (tokens.length == 3) {
             String oldClassName = inputTransformer.transformClassName(tokens[0]);
@@ -483,6 +494,11 @@ public class JarMapping {
                 String temp = newFieldName;
                 newFieldName = oldFieldName;
                 oldFieldName = temp;
+            }
+
+            if (isExcludedPackage(oldClassName)) {
+                SpecialSource.log("Ignored FD: " + oldClassName + "/" + oldFieldName + " -> " + newFieldName);
+                return;
             }
 
             fields.put(oldClassName + "/" + oldFieldName, newFieldName);
@@ -503,6 +519,11 @@ public class JarMapping {
                 String temp = newMethodName;
                 newMethodName = oldMethodName;
                 oldMethodName = temp;
+            }
+
+            if (isExcludedPackage(oldClassName)) {
+                SpecialSource.log("Ignored MD: " + oldClassName + "/" + oldMethodName + " -> " + newMethodName);
+                return;
             }
 
             methods.put(oldClassName + "/" + oldMethodName + " " + oldMethodDescriptor, newMethodName);
